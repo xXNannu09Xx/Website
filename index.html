@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TermoGame</title>
+  <link href="https://fonts.cdnfonts.com/css/menlo" rel="stylesheet" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Menlo', 'Courier New', monospace;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: rgba(0, 0, 0, 0.4);
+      height: 100%;
+      width: 100%;
+      color: #00ffff;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      position: relative;
+    }
+
+    #background-video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    .window {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      background: rgba(0, 0, 0, 0.5);
+      margin: 0;
+      position: relative;
+    }
+
+    .title-bar {
+      background: #2b2b2b;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .circles {
+      display: flex;
+      gap: 8px;
+    }
+
+    .circle {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .close { background-color: #ff5f56; }
+    .minimize { background-color: #ffbd2e; }
+    .maximize { background-color: #33ff33; }
+
+    .title {
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 14px;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0px 10px;
+      font-size: 14px;
+      line-height: 1.4;
+      position: relative;
+      height: calc(100vh - 30px);
+      width: 100%;
+      margin: 0;
+      padding-bottom: 50px;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+      gap: 10px;
+    }
+
+    .left-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .welcome-msg {
+      max-width: 60%;
+      font-size: 14px;
+      color: #00fff;
+      align-self: flex-start;
+    }
+
+    .ascii-art {
+      white-space: pre;
+      font-size: 12px;
+      color: #00ffff;
+      font-family: 'Menlo', monospace;
+      pointer-events: none;
+      line-height: 1.1;
+      margin: 0;
+      text-align: right;
+      max-width: 40%;
+      text-shadow:
+        0 0 1px #00ffff,
+        0 0 3px #00ffff,
+        0 0 6px #00ffff,
+        0 0 10px #00ffff,
+        0 0 15px #00ffff;
+      animation: asciiGlow 1.5s infinite alternate;
+    }
+
+    @keyframes asciiGlow {
+      0% { opacity: 0.85; text-shadow: 0 0 1px #00ffff, 0 0 6px #00ffff; }
+      100% { opacity: 1; text-shadow: 0 0 2px #00ffff, 0 0 10px #00ffff; }
+    }
+
+    .terminal {
+      white-space: pre-wrap;
+    }
+
+    .input-line {
+      display: flex;
+      align-items: center;
+      white-space: pre;
+    }
+
+    .prompt, .typed-text {
+      color: #00ffff;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1em;
+      background: #00ffff;
+      animation: blink 1s step-start infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink {
+      50% { background: transparent; }
+    }
+
+    input#hiddenInput {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @font-face {
+      font-family: 'Noto Sans Display';
+      font-style: normal;
+      font-weight: 400;
+      src: url(./fonts/NotoSansDisplay-Regular.ttf);
+    }
+
+    html {
+      background: #111;
+      padding: 1em;
+      font-family: Noto Sans Display;
+      color: #eee;
+      font-size: 1em;
+      line-height: 1;
+      text-shadow: 0.06rem 0 0.06rem #ea36af, -0.125rem 0 0.06rem #75fa69;
+      letter-spacing: 0.125em;
+      animation-duration: 0.01s;
+      animation-name: textflicker;
+      animation-iteration-count: infinite;
+      animation-direction: alternate;
+    }
+
+    @keyframes textflicker {
+      from {
+        text-shadow: 1px 0 0 #ea36af, -2px 0 0 #75fa69;
+      }
+      to {
+        text-shadow: 2px 0.5px 2px #ea36af, -1px -0.5px 2px #75fa69;
+      }
+    }
+  </style>
+</head>
+
+<body onclick="focusInput()">
+
+  <video id="background-video" autoplay loop muted>
+    <source src="synvid.mp4" type="video/mp4">
+  </video>
+
+  <div class="window">
+    <div class="title-bar">
+      <div class="circles">
+        <div class="circle close" onclick="openYouTube()"></div>
+        <div class="circle minimize" onclick="closeFullscreen()"></div>
+        <div class="circle maximize" onclick="openFullscreen()"></div>
+      </div>
+      <div class="title">TermoGame</div>
+    </div>
+
+    <div class="content" id="terminalContainer">
+      <div class="terminal" id="terminal">
+        <div class="header-row">
+          <div class="left-section">
+            <div class="welcome-msg">Welcome to TermoGame! Type 'hey' to get started.</div>
+            <div id="outputArea">
+              <div class="input-line" id="liveInputLine">
+                <span class="prompt">player@hackclub ~ % </span>
+                <span class="typed-text" id="typedText"></span>
+                <span class="cursor" id="cursor"></span>
+              </div>
+            </div>
+          </div>
+          <pre class="ascii-art">
+====++++++++    
+ -======+++++++++++ 
+ =====.  +++++++++* 
+=====+.  ++++++++***
+=+++++.      +++****
+=+++++.  **  .+*****
+=+++++.  ++  .******
+=+++++.  +*  .******
+ +++++.  **  .***** 
+ +++++************* 
+    ************    
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <input type="text" id="hiddenInput" autofocus autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <audio id="typeSound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
+  </div>
+
+  <script>
+    const terminalContainer = document.getElementById("terminalContainer");
+    const outputArea = document.getElementById("outputArea");
+    const input = document.getElementById("hiddenInput");
+    const typedText = document.getElementById("typedText");
+    const typeSound = document.getElementById("typeSound");
+    const liveInputLine = document.getElementById("liveInputLine");
+
+    const availableCommands = [
+      'hey', 'guide', 'req', 'projects', 'reward', 'faqs', 'club-meet', 'submit', 'help', 'clear',
+      'guide -n', 'req -n', 'projects -n', 'reward -n', 'faqs -n', 'club-meet -n', 'submit -n', 'help -n'
+    ];
+
+    let commandHistory = [];
+    let historyIndex = -1;
+
+    function focusInput() {
+      input.focus();
+    }
+
+    function playTypeSound() {
+      typeSound.currentTime = 0;
+      typeSound.play();
+    }
+
+    input.addEventListener("input", () => {
+      typedText.textContent = input.value;
+      playTypeSound();
+    });
+
+    input.addEventListener("keydown", e => {
+      if (e.key === "ArrowUp") {
+        if (commandHistory.length > 0 && historyIndex > 0) {
+          historyIndex--;
+          input.value = commandHistory[historyIndex];
+          typedText.textContent = input.value;
+        }
+      } else if (e.key === "ArrowDown") {
+        if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+          historyIndex++;
+          input.value = commandHistory[historyIndex];
+          typedText.textContent = input.value;
+        } else {
+          input.value = '';
+          typedText.textContent = '';
+        }
+      } else if (e.key === "Enter") {
+        const value = input.value.trim();
+        if (!value) return;
+
+        commandHistory.push(value);
+        historyIndex = commandHistory.length;
+
+        const commandLine = liveInputLine.cloneNode(true);
+        commandLine.querySelector("#typedText").textContent = value;
+        commandLine.querySelector("#cursor").remove();
+        outputArea.insertBefore(commandLine, liveInputLine);
+
+        processCommand(value.toLowerCase());
+
+        input.value = '';
+        typedText.textContent = '';
+        terminalContainer.scrollTop = terminalContainer.scrollHeight;
+      }
+    });
+
+    function printLine(text, delay = 1) {
+      const div = document.createElement("div");
+      outputArea.insertBefore(div, liveInputLine);
+      let index = 0;
+      function typeChar() {
+        if (index < text.length) {
+          div.textContent += text.charAt(index);
+          index++;
+          setTimeout(typeChar, delay);
+        }
+      }
+      typeChar();
+    }
+
+    function printLines(lines) {
+      let i = 0;
+      function nextLine() {
+        if (i < lines.length) {
+          printLine(lines[i]);
+          i++;
+          setTimeout(nextLine, lines[i - 1].length * 20 + 10);
+        }
+      }
+      nextLine();
+    }
+
+    function processCommand(cmd) {
+      if (cmd === "hey") {
+        printLines([
+          "1) guide (For a quick guide)",
+          "2) req (Requirements to participate)",
+          "3) projects (To see the example projects)",
+          "4) reward (To see the reward)",
+          "5) faqs (Frequently Asked Questions)",
+          "6) club-meet (To run a club meeting)",
+          "7) submit (Submit your project)",
+          "8) help",
+          "",
+          "Use '-n' after any command to open in new tab (e.g. guide -n)"
+        ]);
+      } else if (cmd === "clear") {
+        outputArea.innerHTML = "";
+        outputArea.appendChild(liveInputLine);
+      } else if (availableCommands.includes(cmd)) {
+        if (cmd.endsWith("-n")) {
+          const page = cmd.split(" ")[0];
+          window.open(`redirects/${page}_n.html`, "_blank");
+        } else {
+          printLine("Guide: This is a simple terminal game. Type 'play' to start.");
+        }
+      } else {
+        printLine(`'${cmd}' is not a recognized command.`);
+      }
+    }
+
+    function openFullscreen() {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) elem.requestFullscreen();
+    }
+
+    function closeFullscreen() {
+      if (document.exitFullscreen) document.exitFullscreen();
+    }
+
+    function openYouTube() {
+      window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
+    }
+
+    focusInput();
+  </script>
+</body>
+</html>
